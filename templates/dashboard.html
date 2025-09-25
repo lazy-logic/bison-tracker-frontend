@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BisonGuard - Live Monitoring Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #3498db;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .video-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .video-feed {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+        }
+        
+        .camera-title {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-online {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .status-offline {
+            background: var(--danger-color);
+            color: white;
+        }
+        
+        .alert-item {
+            background: white;
+            border-left: 4px solid var(--warning-color);
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 5px;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            height: 400px;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
+            }
+        }
+        
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: var(--danger-color);
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50%, 100% {
+                opacity: 1;
+            }
+            25%, 75% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="mb-0">
+                        <i class="fas fa-video text-primary"></i> BisonGuard
+                        <small class="text-muted">Live Monitoring Dashboard</small>
+                    </h1>
+                </div>
+                <div class="col-md-6 text-end">
+                    <span class="live-indicator"></span>
+                    <span class="me-3">LIVE</span>
+                    <span id="current-time" class="text-muted"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Dashboard -->
+    <div class="container-fluid">
+        <!-- Statistics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-detections">0</div>
+                    <div class="stat-label">Total Detections</div>
+                    <div class="mt-2">
+                        <i class="fas fa-chart-line text-success"></i>
+                        <small class="text-muted">Updated live</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="active-tracks">0</div>
+                    <div class="stat-label">Active Tracks</div>
+                    <div class="mt-2">
+                        <i class="fas fa-crosshairs text-info"></i>
+                        <small class="text-muted">Currently tracking</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="peak-count">0</div>
+                    <div class="stat-label">Peak Count Today</div>
+                    <div class="mt-2">
+                        <i class="fas fa-trophy text-warning"></i>
+                        <small class="text-muted" id="peak-time">--:--</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="cameras-online">0/0</div>
+                    <div class="stat-label">Cameras Online</div>
+                    <div class="mt-2">
+                        <i class="fas fa-wifi text-success"></i>
+                        <small class="text-muted">System status</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Video Feeds Row -->
+        <div class="row mb-4">
+            {% for camera_id, camera in cameras.items() %}
+            <div class="col-md-6">
+                <div class="video-container">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="camera-title">
+                            <i class="fas fa-camera"></i> {{ camera.name }}
+                        </h5>
+                        <span class="status-badge status-online" id="status-{{ camera_id }}">
+                            ONLINE
+                        </span>
+                    </div>
+                    <img src="{{ url_for('video_feed', camera_id=camera_id) }}" 
+                         class="video-feed" 
+                         id="video-{{ camera_id }}"
+                         alt="{{ camera.name }} Feed">
+                    <div class="mt-2 text-center">
+                        <small class="text-muted">
+                            <span id="fps-{{ camera_id }}">0</span> FPS | 
+                            <span id="count-{{ camera_id }}">0</span> Bison Detected
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h5 class="mb-3">Detection Timeline</h5>
+                    <canvas id="timeline-chart"></canvas>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <h5 class="mb-3">Camera Distribution</h5>
+                    <canvas id="distribution-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alerts Section -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="video-container">
+                    <h5 class="mb-3">
+                        <i class="fas fa-bell text-warning"></i> Recent Alerts
+                    </h5>
+                    <div id="alerts-container">
+                        <div class="text-muted text-center py-3">
+                            No alerts at this time
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Initialize Socket.IO connection
+        const socket = io();
+        
+        // Chart configurations
+        const timelineCtx = document.getElementById('timeline-chart').getContext('2d');
+        const distributionCtx = document.getElementById('distribution-chart').getContext('2d');
+        
+        // Timeline chart
+        const timelineChart = new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Total Bison Count',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Distribution chart
+        const distributionChart = new Chart(distributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Camera 1', 'Camera 2'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 99, 132, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+        
+        // Socket event handlers
+        socket.on('connect', function() {
+            console.log('Connected to BisonGuard Dashboard');
+        });
+        
+        socket.on('stats_update', function(stats) {
+            // Update statistics
+            document.getElementById('total-detections').textContent = stats.total_detections || 0;
+            document.getElementById('active-tracks').textContent = stats.current_active_tracks || 0;
+            document.getElementById('peak-count').textContent = stats.peak_count_today || 0;
+            document.getElementById('cameras-online').textContent = 
+                `${stats.cameras_online || 0}/${stats.total_cameras || 0}`;
+            
+            if (stats.peak_time) {
+                const peakTime = new Date(stats.peak_time);
+                document.getElementById('peak-time').textContent = 
+                    peakTime.toLocaleTimeString();
+            }
+        });
+        
+        socket.on('detection_update', function(data) {
+            // Update timeline chart
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString();
+            
+            if (timelineChart.data.labels.length > 20) {
+                timelineChart.data.labels.shift();
+                timelineChart.data.datasets[0].data.shift();
+            }
+            
+            timelineChart.data.labels.push(timeLabel);
+            timelineChart.data.datasets[0].data.push(data.count);
+            timelineChart.update();
+            
+            // Update camera-specific stats
+            if (data.camera_id) {
+                const countEl = document.getElementById(`count-${data.camera_id}`);
+                if (countEl) {
+                    countEl.textContent = data.count;
+                }
+            }
+        });
+        
+        socket.on('alert', function(alert) {
+            // Add alert to container
+            const alertsContainer = document.getElementById('alerts-container');
+            const alertHtml = `
+                <div class="alert-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>${alert.message}</strong>
+                        <small class="text-muted">${new Date(alert.timestamp).toLocaleTimeString()}</small>
+                    </div>
+                    <small class="text-muted">Camera: ${alert.camera_id}</small>
+                </div>
+            `;
+            
+            // Remove placeholder if exists
+            const placeholder = alertsContainer.querySelector('.text-muted.text-center');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            // Add new alert at the top
+            alertsContainer.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Keep only last 5 alerts
+            const alerts = alertsContainer.querySelectorAll('.alert-item');
+            if (alerts.length > 5) {
+                alerts[alerts.length - 1].remove();
+            }
+        });
+        
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                now.toLocaleString();
+        }
+        
+        setInterval(updateTime, 1000);
+        updateTime();
+        
+        // Fetch initial stats
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(stats => {
+                socket.emit('stats_update', stats);
+            });
+        
+        // Periodically fetch camera stats
+        setInterval(() => {
+            fetch('/api/cameras')
+                .then(response => response.json())
+                .then(cameras => {
+                    cameras.forEach(camera => {
+                        // Update camera status
+                        const statusEl = document.getElementById(`status-${camera.id}`);
+                        if (statusEl) {
+                            statusEl.className = `status-badge status-${camera.status}`;
+                            statusEl.textContent = camera.status.toUpperCase();
+                        }
+                        
+                        // Update FPS if available
+                        if (camera.stats && camera.stats.fps) {
+                            const fpsEl = document.getElementById(`fps-${camera.id}`);
+                            if (fpsEl) {
+                                fpsEl.textContent = camera.stats.fps.toFixed(1);
+                            }
+                        }
+                    });
+                });
+        }, 5000);
+    </script>
+</body>
+</html>

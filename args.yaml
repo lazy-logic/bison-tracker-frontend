@@ -1,0 +1,18 @@
+# Ultralytics AGPL-3.0 License – https://ultralytics.com/license
+# Default settings for ByteTrack (mode="track")
+# Docs: https://docs.ultralytics.com/modes/track/
+# ByteTrack source: https://github.com/ifzhang/ByteTrack
+
+tracker_type: bytetrack       # tracker type, options: ['botsort', 'bytetrack']
+
+# Association thresholds
+track_high_thresh: 0.25       # first (strict) matching threshold
+track_low_thresh: 0.10        # second (lenient) matching threshold
+new_track_thresh: 0.25        # confidence threshold to start a new track
+
+# Buffer & matching settings
+track_buffer: 30              # number of frames to keep “lost” tracks alive
+match_thresh: 0.80            # IoU threshold for matching
+
+# Score fusion
+fuse_score: true              # fuse detection confidence with IoU before matching

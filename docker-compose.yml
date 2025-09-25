@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  bisonguard:
+    build: .
+    container_name: bisonguard-app
+    ports:
+      - "5000:5000"
+      - "8080:8080"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://postgres:password@db:5432/bisonguard
+      - REDIS_URL=redis://redis:6379
+      - RTSP_URL_1=${RTSP_URL_1}
+      - RTSP_URL_2=${RTSP_URL_2}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    networks:
+      - bisonguard-network
+
+  db:
+    image: postgres:14-alpine
+    container_name: bisonguard-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=bisonguard
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - bisonguard-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: bisonguard-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bisonguard-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: bisonguard-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - bisonguard
+    networks:
+      - bisonguard-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  bisonguard-network:
+    driver: bridge
