@@ -480,7 +480,7 @@ To verify camera connectivity:
 python test-rtsps.py
 ```
 
-## ⚙️ Configuration
+##  Configuration
 
 ### ByteTrack Parameters (args.yaml)
 - `track_high_thresh`: 0.25 - First-pass matching threshold
@@ -501,7 +501,7 @@ CAMERAS = {
 }
 ```
 
-## 📊 API Endpoints (Flask Dashboard)
+##  API Endpoints (Flask Dashboard)
 
 - `GET /` - Main dashboard page
 - `GET /video_feed/<camera_id>` - MJPEG video stream
@@ -511,14 +511,14 @@ CAMERAS = {
 - `GET /api/alerts` - Recent alerts
 - `GET /api/cameras` - Camera configuration and status
 
-## 🔧 WebSocket Events
+##  WebSocket Events
 
 - `connect` - Client connection established
 - `stats_update` - Real-time statistics update
 - `detection_update` - New detection event
 - `alert` - Alert notification
 
-## 🚀 Production Deployment
+##  Production Deployment
 
 For production use, consider:
 
@@ -533,7 +533,7 @@ gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:5000 flask_dashboard:app
 
 4. **Use environment variables** for sensitive configuration
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues:
 
@@ -555,14 +555,14 @@ gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:5000 flask_dashboard:app
    - Reduce detection confidence threshold
    - Process every nth frame instead of all frames
 
-## 📈 Performance Tips
+##  Performance Tips
 
 - **GPU Acceleration**: Use CUDA-enabled GPU for 10x+ speedup
 - **Multiple Cameras**: Run separate processes for each camera
 - **Network Optimization**: Use wired connection for RTSP streams
 - **Storage**: Ensure sufficient disk space for video recording
 
-## 🤝 Contributing
+##  Contributing
 
 To extend the system:
 1. Add new detection models in the models/ directory
@@ -570,11 +570,11 @@ To extend the system:
 3. Create custom alert rules
 4. Add new visualization components
 
-## 📝 License
+##  License
 
 This project is part of the IMMERSE research initiative.
 
-## 📧 Support
+##  Support
 
 For issues or questions, please check:
 - The troubleshooting section above
