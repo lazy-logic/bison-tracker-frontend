@@ -581,6 +581,3 @@ For issues or questions, please check:
 - The inline code documentation
 - System logs in the console output
 
----
-
-**Note**: This system is designed for wildlife conservation and research purposes. Please ensure compliance with local regulations regarding wildlife monitoring and data collection.
