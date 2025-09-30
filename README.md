@@ -1,4 +1,5 @@
 # BisonGuard - Real-time Bison Tracking System
+<img width="949" height="380" alt="Annotation 2025-09-30 102806" src="https://github.com/user-attachments/assets/d67c36d3-8c4a-413a-a983-3609783921fe" />
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-2.0%2B-green)](https://flask.palletsprojects.com/)
